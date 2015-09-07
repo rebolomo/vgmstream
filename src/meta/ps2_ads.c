@@ -38,7 +38,7 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 	/* seems the Gran Turismo 4 ADS files are considered corrupt,*/
 	/* so I changed it to adapt the stream size if that's the case */
 	/* instead of failing playing them at all*/
-	streamSize = read_32bitLE(0x24,streamFile);
+	streamSize = read_32bitBE(0x24,streamFile);
     
 	if (get_streamfile_size(streamFile) < (size_t)(streamSize + 0x28))
 	{
@@ -46,8 +46,8 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 	}
 
     /* check loop */    
-	if ((read_32bitLE(0x1C,streamFile) == 0xFFFFFFFF) || 
-		((read_32bitLE(0x18,streamFile) == 0) && (read_32bitLE(0x1C,streamFile) == 0)))
+	if ((read_32bitBE(0x1C,streamFile) == 0xFFFFFFFF) || 
+		((read_32bitBE(0x18,streamFile) == 0) && (read_32bitBE(0x1C,streamFile) == 0)))
 	{
 		loop_flag = 0;
 	}
@@ -64,27 +64,28 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 
     /* fill in the vital statistics */
     vgmstream->channels = read_32bitLE(0x10,streamFile);
-    vgmstream->sample_rate = read_32bitLE(0x0C,streamFile);
+	//	REBOL change
+    vgmstream->sample_rate = read_32bitBE(0x0C,streamFile);
 
     /* Check for Compression Scheme */
     vgmstream->coding_type = coding_PSX;
     vgmstream->num_samples = ((streamSize-0x40)/16*28)/vgmstream->channels;
 
 	/* SS2 container with RAW Interleaved PCM */
-    if (read_32bitLE(0x08,streamFile)!=0x10) 
+    if (read_32bitBE(0x08,streamFile)!=0x10) 
 	{
 
         vgmstream->coding_type=coding_PCM16LE;
         vgmstream->num_samples = streamSize/2/vgmstream->channels;
     }
-
-    vgmstream->interleave_block_size = read_32bitLE(0x14,streamFile);
+	//	REBOL change
+    vgmstream->interleave_block_size = read_32bitBE(0x14,streamFile);
     vgmstream->layout_type = layout_interleave;
     vgmstream->meta_type = meta_PS2_SShd;
 
     /* Get loop point values */
     if(vgmstream->loop_flag) {
-		if((read_32bitLE(0x1C,streamFile)*0x10*vgmstream->channels+0x800)==get_streamfile_size(streamFile)) 
+		if((read_32bitBE(0x1C,streamFile)*0x10*vgmstream->channels+0x800)==get_streamfile_size(streamFile)) 
 		{
 			// Search for Loop Value
 			readOffset=(off_t)get_streamfile_size(streamFile)-(4*vgmstream->interleave_block_size); 
@@ -106,12 +107,12 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 			vgmstream->loop_end_sample /=vgmstream->channels;
 
 		} else {
-			if(read_32bitLE(0x1C,streamFile)<=vgmstream->num_samples) {
-				vgmstream->loop_start_sample = read_32bitLE(0x18,streamFile);
-				vgmstream->loop_end_sample = read_32bitLE(0x1C,streamFile);
+			if(read_32bitBE(0x1C,streamFile)<=vgmstream->num_samples) {
+				vgmstream->loop_start_sample = read_32bitBE(0x18,streamFile);
+				vgmstream->loop_end_sample = read_32bitBE(0x1C,streamFile);
 			} else {
-				vgmstream->loop_start_sample = (read_32bitLE(0x18,streamFile)*0x10)/16*28/vgmstream->channels;;
-				vgmstream->loop_end_sample = (read_32bitLE(0x1C,streamFile)*0x10)/16*28/vgmstream->channels;
+				vgmstream->loop_start_sample = (read_32bitBE(0x18,streamFile)*0x10)/16*28/vgmstream->channels;;
+				vgmstream->loop_end_sample = (read_32bitBE(0x1C,streamFile)*0x10)/16*28/vgmstream->channels;
 			}
 		}
     }
@@ -127,10 +128,10 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 	if ((streamSize * 2) == (get_streamfile_size(streamFile) - 0x18))
 	{
 		// True Fortune PS2
-		streamSize = (read_32bitLE(0x24,streamFile) * 2) - 0x10;
+		streamSize = (read_32bitBE(0x24,streamFile) * 2) - 0x10;
 		vgmstream->num_samples = streamSize / 16 * 28 / vgmstream->channels;
 	}
-	else if(get_streamfile_size(streamFile) - read_32bitLE(0x24,streamFile) >= 0x800)
+	else if(get_streamfile_size(streamFile) - read_32bitBE(0x24,streamFile) >= 0x800)
 	{
 		// Hack for files with start_offset = 0x800
 		start_offset=0x800;
@@ -142,7 +143,7 @@ VGMSTREAM * init_vgmstream_ps2_ads(STREAMFILE *streamFile) {
 		
 		for(i=0;i<0x1f6;i+=4) 
 		{
-			if(read_32bitLE(0x28+(i*4),streamFile)!=0) 
+			if(read_32bitBE(0x28+(i*4),streamFile)!=0) 
 			{
 				start_offset=0x28;
 				break;
